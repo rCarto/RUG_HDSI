@@ -1,0 +1,1411 @@
+---
+title: "Thematic Maps with R"
+subtitle: "R User Group at the Harvard Data Science Initiative"
+author: Timothée Giraud
+date: 20 04 2023
+date-format: "MMM D, YYYY"
+slide-number: true
+logo: img/logos/logo.png
+progress: true
+format: 
+  revealjs:
+    highlight-style: solarized
+    code-line-numbers: false
+fig-width: 5
+fig-height: 6
+bibliography: references.bib
+---
+
+# Thematic maps with R?
+
+## Reproducible cartography? 
+
+:::: {.columns}
+
+::: {.column width="60%"}
+![](img/maparticle.jpg)
+:::
+
+::: {.column width="40%"}
+Maps, as other graphics or statistical outputs, are part of scientific studies. 
+
+:::
+
+::::
+
+
+
+## The problem for cartographers
+
+:::: {.columns}
+
+::: {.column width="60%"}
+![](img/chain2.png)
+:::
+
+::: {.column width="40%"}
+Many maps produced in an academic context are made with a set of software products that slices the cartographic process.   
+
+
+
+:::
+
+::::
+
+
+## The problem for cartographers 
+
+Fully reproducible maps should be associated with code and data. 
+
+![@giraudlambert](img/giraudlambert.png)
+
+
+
+## The problem for R users
+
+![](img/lightsemio.png){.r-stretch}
+
+
+
+## A solution 
+
+:::: {.columns}
+::: {.column width="60%"}
+![](img/chain4.png)
+:::
+::: {.column width="40%"}
+
+Simplify the map making process in an unified workflow thanks to R and its spatial ecosystem ! 
+
+:::
+::::
+
+
+
+
+
+# The R spatial ecosystem
+
+
+## A bit of history {.smaller}
+
+- before 2003 : `spatial`, `sgeostat`, `splancs`, `akima`, `geoR`, `spatstat`, `spdep`, `maptools`.   
+- 2003 : `rgdal` (Roger Bivand, Tim Keitt & Barry Rowlingson), interface between R and GDAL and PROJ4  
+- 2005 : `sp` (Edzer Pebesma & Roger Bivand), classes methods for spatial objects, quickly adopted. 
+- 2008 : `sp` surpport in `ggplot2` (Hadley Wickham)
+- 2010 : `rgeos` (Roger Bivand & Colin Rundel), interface between R & GEOS.   
+- 2010 : `raster` (Robert J. Hijmans), support for raster data
+- 2016 : **`sf`** (Edzer Pebesma), supersedes `sp`, `rgdal` & `rgeos`
+- 2018 : `stars` (Edzer Pebesma), supersedes `raster`
+- 2020 : **`terra`** (Robert J. Hijmans) **also** supersedes `raster`
+
+
+
+## Thematic cartography
+- 2014 : `tmap` (Martijn Tennekes)
+- 2017 : `ggplot2` + `ggspatial` (Dewey Dunnington)
+- 2021 : `mapsf` (T. Giraud) supersedes `cartography`
+
+## Interactive cartography
+- 2015 : `leaflet` (Joe Cheng et al.), relies on the `leaflet` javascript library.
+- 2015 : `mapview` (Tim Appelhans et al.), relies on the `leaflet` package.
+- 2018 : `mapdeck` (David Cooley), relies on `Mapbox GL` & `Deck.gl` libraries.
+
+
+## Spatial statistics
+
+- `spatstat` : Point pattern analysis
+- `gstat` : Variogram & Krigeage
+- `rgeoda` : Geoda with R
+- `GWmodel`, `spgwr` : Geographically Weighted Models
+- ...
+
+## sf, corner stone of the R spatial ecosystem {.smaller}
+
+:::: {.columns}
+::: {.column width="40%"}
+Interface between R and extensively used libraries in GIS: 
+
+* [GDAL](http://www.gdal.org/) - Geospatial Data Abstraction Library
+* [PROJ](https://proj.org/) - Coordinate Transformation Software
+* [GEOS](http://trac.osgeo.org/geos/) - Geometry Engine - Open Source   
+
+
+[<img src="img/logos/sf.gif" width=100px alt="GitHub repo"/>](https://r-spatial.github.io/sf/)
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=sf)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/r-spatial/sf)
+
+:::
+::: {.column width="60%"}
+
+![@pebesma2023spatial](img/sf_deps.png)
+:::
+::::
+
+## sf  {.smaller}
+
+::: {.panel-tabset}
+
+
+```{r}
+#| include: false
+#| cache: false
+knitr::knit_hooks$set(nm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,0,0))
+  } 
+})
+knitr::opts_chunk$set(nm=TRUE, echo=TRUE)
+```
+
+### `sf` objects
+
+![](img/sf.png)
+
+### Import
+
+```{r}
+library(sf)
+mtq <- st_read(dsn = "data/mtq.gpkg",layer = "mtq")
+```
+
+
+### Centroids
+
+```{r,  fig.height=3, fig.width=3, nm=TRUE}
+mtq_c <- st_centroid(mtq)
+plot(st_geometry(mtq))
+plot(st_geometry(mtq_c), cex = 1.2, col = "red", pch = 20, add = TRUE)
+```
+
+### Distance matrix
+```{r,  fig.height=3, fig.width=3, nm=TRUE}
+mat <- st_distance(x = mtq_c, y = mtq_c)
+mat[1:5, 1:5]
+```
+
+### Aggregation
+```{r,  fig.height=3, fig.width=3, nm=TRUE}
+mtq_u <- st_union(mtq)
+plot(st_geometry(mtq), col = "lightblue")
+plot(st_geometry(mtq_u), lwd = 2, border = "red", add = TRUE)
+```
+
+### Buffer
+```{r,  fig.height=3, fig.width=3, nm=TRUE}
+mtq_b <- st_buffer(x = mtq_u, dist = 5000)
+plot(st_geometry(mtq_b), col = "grey", lwd = 2, border = "red")
+plot(st_geometry(mtq), col = "lightblue", add = TRUE)
+plot(st_geometry(mtq_u), lwd = 2, add = TRUE)
+```
+
+
+### Intersection
+
+:::: {.columns}
+::: {.column width="30%"}
+
+```{r,  fig.height=3, fig.width=3, nm=TRUE, echo=FALSE}
+m <- rbind(c(700015,1624212), c(700015,1641586), 
+           c(719127,1641586), c(719127,1624212), 
+           c(700015,1624212))
+p <- st_sf(st_sfc(st_polygon(list(m))), crs = st_crs(mtq))
+plot(st_geometry(mtq))
+plot(p, border="red", lwd=2, add=T)
+text(719127,1641586, "p", pos = 4, cex = 3)
+```
+:::
+::: {.column width="70%"}
+
+
+```{r,  fig.height=3, fig.width=3, nm=TRUE, warning=F}
+#| layout-ncol: 2
+mtq_z <- st_intersection(x = mtq, y = p)
+plot(st_geometry(mtq))
+plot(st_geometry(mtq_z), col = "red", border = "green", add = TRUE)
+plot(st_geometry(mtq_z), lwd = 2)
+```
+:::
+::::
+### Voronoi polygons
+
+```{r,  fig.height=3, fig.width=3, nm=TRUE}
+mtq_c |> 
+  st_union() |> 
+  st_voronoi() |> 
+  st_collection_extract("POLYGON") |> 
+  st_intersection(mtq_u) |> 
+  st_sf() |> 
+  st_join(mtq_c, st_intersects) |>
+  st_cast("MULTIPOLYGON") |>
+  st_geometry() |>
+  plot(col = "ivory4")
+```
+
+
+
+
+### Plot
+
+:::: {.columns}
+::: {.column width="30%"}
+
+```{r, fig.height=3, fig.width=3, nm=TRUE}
+plot(st_geometry(mtq))
+```
+:::
+::: {.column width="70%"}
+
+```{r, fig.height=4, fig.width=7, nm=TRUE}
+plot(mtq)
+```
+:::
+::::
+
+
+:::
+
+
+
+```{r}
+#| include: false
+#| cache: false
+knitr::knit_hooks$set(nm = function(before, options, envir){
+  if (before){
+    par(mar=c(0,0,0,0))
+  } 
+})
+knitr::opts_chunk$set(nm=FALSE, echo=FALSE)
+```
+
+
+
+# mapsf  
+
+[<img src="img/logos/mapsf.png" height=200px alt="mapsf logo"/>](https://riatelab.github.io/mapsf)
+
+
+## Typical workflow
+
+
+![](img/workflow.png){.r-stretch}
+
+
+
+
+## mf_map() {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+[`mf_map()`](https://riatelab.github.io/mapsf/reference/mf_map.html) is the main function of the package.
+
+```r
+mf_map(x = objet_sf,
+var = "variable",
+type = "map type",
+...)
+```
+:::
+::: {.column width="50%"}
+
+![](img/help.png){.r-strech}
+:::
+::::
+
+<!-- # ```{r} -->
+<!-- #  -->
+<!-- #  -->
+<!-- # knitr::knit_exit() -->
+<!-- #  -->
+<!-- # ``` -->
+
+## Various map types 
+
+
+<!-- ![Vignette : [Get started](https://riatelab.github.io/mapsf/articles/mapsf.html#symbology) -->
+<!-- ](img/type.png){.r-stretch} -->
+
+::: {.r-stack}
+
+![](img/map01.png)
+
+![](img/map02.png){.fragment  .fade-in-then-out}
+
+![](img/map03.png){.fragment  .fade-in-then-out}
+
+![](img/map04.png){.fragment  .fade-in-then-out}
+
+![](img/map05.png){.fragment  .fade-in-then-out}
+
+![](img/map06.png){.fragment  .fade-in-then-out}
+
+![](img/map07.png){.fragment  .fade-in-then-out}
+
+![](img/map08.png){.fragment  .fade-in-then-out}
+
+![](img/map09.png){.fragment  .fade-in-then-out}
+
+
+
+:::
+
+
+
+## Map layout
+
+![](img/deco2.svg)
+
+
+
+
+
+
+
+# Example
+
+## Base map {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r lib}
+library(mapsf)
+```
+
+```{r base_map}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Plot the base map
+mf_map(x = mtq)
+```
+
+:::
+::: {.column width="40%"}
+
+```{r base_map}
+```
+:::
+::::
+
+## Choropleth map {.smaller}
+:::: {.columns}
+::: {.column width="60%"}
+
+```{r choro_map}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro")
+```
+
+:::
+::: {.column width="40%"}
+```{r choro_map}
+```
+
+:::
+::::
+
+
+## Parameters customisation  {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r choro_map_custom}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro",
+       pal = "Dark Mint",
+       breaks = "quantile",
+       nbreaks = 6,
+       leg_title = "Median Income\n(euros)",
+       leg_val_rnd = -2,
+       leg_pos = "topright")
+```
+
+:::
+::: {.column width="40%"}
+```{r choro_map_custom}
+```
+:::
+::::
+
+
+
+## Map layout {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r layout}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro",
+       pal = "Dark Mint",
+       breaks = "quantile",
+       nbreaks = 6,
+       leg_title = "Median Income\n(euros)",
+       leg_val_rnd = -2,
+       leg_pos = "topright")
+# Plot a layout elements
+mf_title("Wealth in Martinique, 2015")
+mf_credits("T. Giraud\nSources: INSEE & IGN, 2018")
+mf_scale(size = 5)
+mf_arrow('topleft')
+```
+:::
+::: {.column width="40%"}
+```{r layout}
+```
+:::
+::::
+
+## Theme and layout {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r theme}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Set a theme 
+mf_theme(x = "green")
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro",
+       pal = "Dark Mint",
+       breaks = "quantile",
+       nbreaks = 6,
+       leg_title = "Median Income\n(euros)",
+       leg_val_rnd = -2,
+       leg_pos = "topright")
+# Plot a layout elements
+mf_title("Wealth in Martinique, 2015")
+mf_credits("T. Giraud\nSources: INSEE & IGN, 2018")
+mf_scale(size = 5)
+mf_arrow('topleft')
+```
+
+:::
+::: {.column width="40%"}
+```{r theme}
+```
+:::
+::::
+
+## Inset {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r inset}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Set a theme 
+mf_theme(x = "green")
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro",
+       pal = "Dark Mint",
+       breaks = "quantile",
+       nbreaks = 6,
+       leg_title = "Median Income\n(euros)",
+       leg_val_rnd = -2,
+       leg_pos = "topright")
+# Add an inset world map
+mf_inset_on(x = "worldmap", pos = "right")
+mf_worldmap(mtq, col = "#0E3F5C")
+mf_inset_off()
+# Plot a layout elements
+mf_title("Wealth in Martinique, 2015")
+mf_credits("T. Giraud\nSources: INSEE & IGN, 2018")
+mf_scale(size = 5)
+mf_arrow('topleft')
+```
+:::
+::: {.column width="40%"}
+```{r inset}
+```
+:::
+::::
+
+## Margins {.smaller}
+
+```{r fig_dim}
+#| echo: false
+#| results: hide
+mtq <- mf_get_mtq()
+ratio <- mf_get_ratio(x = mtq, width = 5, 
+                       expandBB = c(0,0,0,.3), 
+                       theme = "green")
+```
+
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r margins}
+#| eval: false
+#| echo: true
+mtq <- mf_get_mtq()
+# Set a theme 
+mf_theme(x = "green")
+# Start an empty map with extra margins
+mf_init(x = mtq, expandBB = c(0,0,0,.3))
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro",
+       pal = "Dark Mint",
+       breaks = "quantile",
+       nbreaks = 6,
+       leg_title = "Median Income\n(euros)",
+       leg_val_rnd = -2,
+       leg_pos = "topright",
+       add = TRUE)
+# Add an inset world map
+mf_inset_on(x = "worldmap", pos = "right")
+mf_worldmap(mtq, col = "#0E3F5C")
+mf_inset_off()
+# Plot a layout elements
+mf_title("Wealth in Martinique, 2015")
+mf_credits("T. Giraud\nSources: INSEE & IGN, 2018")
+mf_scale(size = 5)
+mf_arrow('topleft')
+```
+:::
+::: {.column width="40%"}
+```{r margins}
+#| fig-width: !expr ratio[1] 
+#| fig-height: !expr ratio[2] 
+```
+:::
+::::
+
+<!-- ## Figure dimension ratio {.smaller} -->
+
+<!-- :::: {.columns} -->
+<!-- ::: {.column width="60%"} -->
+<!-- As expected, an empty space has been added on the right side of the map.    -->
+<!-- But also on the top and bottom of the map.   -->
+<!-- It happens because the size (width/height ratio) of the figure is fixed in defined in the quarto code.  -->
+
+<!-- ```{{r}} -->
+<!-- #| fig-width: 5 -->
+<!-- #| fig-height: 6 -->
+<!-- (code for the map) -->
+<!-- ``` -->
+
+
+
+<!-- ::: -->
+<!-- ::: {.column width="40%"} -->
+<!-- ```{r margins} -->
+<!-- ``` -->
+<!-- ::: -->
+<!-- :::: -->
+
+<!-- ## Figure dimension ratio {.smaller} -->
+
+<!-- :::: {.columns} -->
+<!-- ::: {.column width="60%"} -->
+<!-- We can compute dimensions that match `mtq` width/height ratio (+ theme and expansion): -->
+
+<!-- ```{r fig_dim} -->
+<!-- #| echo: true -->
+<!-- mtq <- mf_get_mtq() -->
+<!-- (ratio <- mf_get_ratio(x = mtq, width = 5,  -->
+<!--                        expandBB = c(0,0,0,.3),  -->
+<!--                        theme = "green")) -->
+<!-- ``` -->
+
+<!-- And use it in the quarto code -->
+
+<!-- ```{{r}} -->
+<!-- #| fig-width: 5 -->
+<!-- #| fig-height: 4.9 -->
+<!-- (code for the map) -->
+<!-- ``` -->
+<!-- or  -->
+<!-- ```{{r}} -->
+<!-- #| fig-width: !expr ratio[1] -->
+<!-- #| fig-height: !expr ratio[2] -->
+<!-- (code for the map) -->
+<!-- ``` -->
+
+<!-- ::: -->
+<!-- ::: {.column width="40%"} -->
+<!-- ```{r mapfit} -->
+<!-- #| eval: true -->
+<!-- #| echo: false -->
+<!-- #| fig-width: !expr ratio[1] -->
+<!-- #| fig-height: !expr ratio[2] -->
+
+<!-- mtq <- mf_get_mtq() -->
+<!-- # Set a theme  -->
+<!-- mf_theme(x = "green") -->
+<!-- # Start an empty map with extra margins -->
+<!-- mf_init(x = mtq, expandBB = c(0,0,0,.3)) -->
+<!-- # Plot a choropleth map -->
+<!-- mf_map(x = mtq, var = "MED", type = "choro", -->
+<!--        pal = "Dark Mint", -->
+<!--        breaks = "quantile", -->
+<!--        nbreaks = 6, -->
+<!--        leg_title = "Median Income\n(euros)", -->
+<!--        leg_val_rnd = -2, -->
+<!--        leg_pos = "topright", -->
+<!--        add = TRUE) -->
+<!-- # Add an inset world map -->
+<!-- mf_inset_on(x = "worldmap", pos = "right") -->
+<!-- mf_worldmap(mtq, col = "#0E3F5C") -->
+<!-- mf_inset_off() -->
+<!-- # Plot a layout elements -->
+<!-- mf_title("Wealth in Martinique, 2015") -->
+<!-- mf_credits("T. Giraud\nSources: INSEE & IGN, 2018") -->
+<!-- mf_scale(size = 5) -->
+<!-- mf_arrow('topleft') -->
+<!-- ``` -->
+<!-- ::: -->
+<!-- :::: -->
+
+
+
+## Export {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+```{r export}
+#| eval: true
+#| results: hide
+#| echo: true
+mtq <- mf_get_mtq()
+# Set a theme 
+mf_theme(x = "green")
+# Start the export with extra margins
+mf_export(x = mtq, filename = "img/map.svg", 
+          width = 5, expandBB = c(0,0,0,.3))
+# Plot a choropleth map
+mf_map(x = mtq, var = "MED", type = "choro",
+       pal = "Dark Mint",
+       breaks = "quantile",
+       nbreaks = 6,
+       leg_title = "Median Income\n(euros)",
+       leg_val_rnd = -2,
+       leg_pos = "topright",
+       add = TRUE)
+# Add an inset world map
+mf_inset_on(x = "worldmap", pos = "right")
+mf_worldmap(mtq, col = "#0E3F5C")
+mf_inset_off()
+# Plot a layout elements
+mf_title("Wealth in Martinique, 2015")
+mf_credits("T. Giraud\nSources: INSEE & IGN, 2018")
+mf_scale(size = 5)
+mf_arrow('topleft')
+# close export
+dev.off()
+```
+:::
+::: {.column width="40%"}
+
+![](img/map.svg)
+
+
+:::
+::::
+
+
+
+## Themes 
+
+```{r, message = FALSE, results='hide', echo = FALSE, fig.height=5, fig.width = 7}
+#| fig-cap: "Vignette : [How to Use Themes](https://riatelab.github.io/mapsf/articles/web_only/how_to_use_themes.html)"
+#| out-height: "100%"
+
+par(mfrow = c(2,3))
+mf_theme("default")
+mf_map(mtq)
+mf_title("default")
+
+mf_theme("green")
+mf_map(mtq)
+mf_title("green")
+
+mf_theme("dark")
+mf_map(mtq)
+mf_title("dark")
+
+mf_theme("candy")
+mf_map(mtq)
+mf_title("candy")
+
+mf_theme("nevermind")
+mf_map(mtq)
+mf_title("nevermind")
+
+mf_theme("barcelona")
+mf_map(mtq)
+mf_title("barcelona")
+
+
+
+```
+
+
+
+
+
+
+
+## Raster {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+```{r raster1}
+#| eval: false
+#| echo: false
+library(maptiles)
+library(sf)
+library(mapsf)
+mtq <- mf_get_mtq()
+mtq <- st_transform(mtq, 3857)
+osm <- get_tiles(
+  mtq, 
+  provider = "Stamen.TerrainBackground", 
+  crop= TRUE, 
+  zoom = 11
+)
+library(terra)
+writeRaster(osm, filename = "data/osm.tiff")
+```
+
+
+```{r raster2}
+#| eval: false
+#| echo: true
+
+library(terra)
+osm <- rast("data/osm.tiff")
+mf_theme("default", mar = c(0,0,0,0), 
+         inner = TRUE, pos = "right")
+mf_raster(osm)
+mf_title("mf_raster()")
+mf_credits(
+  paste0("Map tiles by Stamen Design ", 
+         "CC BY 3.0 — Map data ", 
+         "© OpenStreetMap contributors"))
+```
+
+
+:::
+::: {.column width="50%"}
+
+```{r raster2}
+#| fig-width: 6.35
+#| fig-height: 7.57
+#| cache: false  
+```
+
+
+:::
+::::
+
+
+
+
+## Documentation 
+
+A [website](https://riatelab.github.io/mapsf/)  
+
+![](img/websitev.png)
+
+## Documentation 
+
+* A ['Get started'](https://riatelab.github.io/mapsf/articles/mapsf.html) vignette.
+
+
+* 'How to' vignettes: 
+
+  - [How to create faceted maps](https://riatelab.github.io/mapsf/articles/web_only/how_to_create_faceted_maps.html)
+  - [How to create inset maps](https://riatelab.github.io/mapsf/articles/web_only/how_to_create_inset_maps.html)
+  - [How to export maps](https://riatelab.github.io/mapsf/articles/mapsf.html)
+  - [How to use a custom font family](https://riatelab.github.io/mapsf/articles/web_only/how_to_use_a_custom_font_family.html)
+  - [How to use themes](https://riatelab.github.io/mapsf/articles/web_only/how_to_use_themes.html)
+
+
+## Documentation 
+A [cheat sheet](https://raw.githubusercontent.com/riatelab/mapsf/master/vignettes/web_only/img/mapsf_cheatsheet.pdf)
+
+![](img/mapsf_cheatsheet.png)
+
+
+
+
+## Development {.smaller}
+
+:::: {.columns}
+::: {.column width="40%"}
+* A minimal number of well-known dependencies
+
+* CI/CD with [GitHub Actions](https://github.com/riatelab/mapsf/actions)
+
+* Tests with `tinytest`, coverage with [Codecov](https://app.codecov.io/gh/riatelab/mapsf)
+
+* Informative commit messages with [conventional commits](https://www.conventionalcommits.org/en/v1.0.0-beta.3/)
+
+[<img src="img/logos/mapsf.png" width=100px alt="GitHub repo"/>](https://riatelab.github.io/mapsf)
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=mapsf)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/riatelab/mapsf)
+
+:::
+::: {.column width="60%"}
+```{r, echo = FALSE, eval = FALSE, results='hide'}
+library(deepdep)
+dep <- deepdep("tmap", depth = 4, dependency_type = c('Imports', 'Depends'))
+png("img/deps.png", width  = 600, height = 450)
+plot_dependencies(dep, "circular", same_level = TRUE, reverse = T, main = 'toto',declutter = F)
+dev.off()
+```
+
+![](img/deps.png)
+:::
+::::
+
+
+# Other packages
+
+
+## tanaka
+
+:::: {.columns}
+::: {.column width="50%"}
+
+Also called "relief contours", "illuminated contours" or "shaded contour lines", the Tanaka method enhances the representation of topography on a map by using shaded contour lines. The result is a 3D-like map.  
+
+
+:::
+::: {.column width="50%"}
+![](img/paris.png)
+
+<img src="img/logos/tanaka.png" width=100px />
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=tanaka)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/riatelab/tanaka)
+
+:::
+::::
+
+## tanaka {.smaller}
+
+```{r tan1}
+#| echo: true
+#| layout-ncol: 2
+#| fig-width: 7
+#| fig-height: 5
+library(tanaka)
+library(terra)
+ras <- rast(system.file("tif/elev.tif", package = "tanaka"))
+plot(ras)
+tanaka(ras, breaks = seq(80,400,20), 
+       legend.pos = "topright", legend.title = "Elevation\n(meters)")
+```
+
+
+
+## tanaka {.smaller}
+
+`tanaka` can be used with non-topographical data:
+
+![](img/tanaka.png)
+
+
+
+## linemap {.smaller}
+
+
+:::: {.columns}
+::: {.column width="30%"}
+`linemap` displays a map made of lines using a data frame of gridded data. 
+
+<img src="img/logos/linemap.png" width=100px />  
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=linemap)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/riatelab/linemap)
+:::
+::: {.column width="70%"}
+```{r lnmap, eval = FALSE, message=FALSE, fig.show='hold'}
+#| echo: false
+library(linemap)
+library(mapsf)
+library(sf)
+data("popOcc")
+occitanie <- st_read(system.file("gpkg/geofla.gpkg",
+                                 package = "linemap"),
+                     layer = "Occitanie")
+mf_theme(bg = "ivory2")
+mf_export(occitanie, width = 800, 
+          filename = "img/linemap.png")
+mf_map(occitanie, col = "ivory1", border = NA)
+linemap(
+  x = popOcc,
+  var = "pop",
+  k = 3.25,
+  threshold = 50,
+  col = "ivory1",
+  border = "ivory4",
+  lwd = 0.6,
+  add = TRUE
+)
+mf_title("Population in Occitanie")
+mf_credits("Gridded data 1 km, INSEE 2010")
+dev.off()
+```
+
+
+![](img/linemap.png)
+
+:::
+::::
+
+
+
+
+## maptiles {.smaller}
+
+:::: {.columns}
+::: {.column width="30%"}
+
+To create maps from tiles, `maptiles` downloads, composes and displays tiles from a large number of providers (e.g. OpenStreetMap, Stamen, Esri, CARTO, or Thunderforest).
+
+
+<img src="img/logos/maptiles.png" width=100px />  
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=maptiles)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/riatelab/maptiles)
+:::
+::: {.column width="70%"}
+
+```{r maptiles, eval=FALSE}
+library(sf)
+library(maptiles)
+hop <- st_read("data/hospital.gpkg", layer = "hospital")
+osm <- get_tiles(hop)
+th <- mf_theme(mar = c(0,0,0,0), inner = TRUE, line = 2, cex = 1.8)
+mf_export(osm, filename = "img/maptiles.png", 
+          width = 768, theme = th)
+mf_raster(osm, add = TRUE)
+mf_map(hop, "capacity", "prop", 
+       border = "grey", inches = .4,
+       leg_title = "Number of beds", 
+       leg_frame = TRUE)
+mf_title("Public Hospital Capacities in Paris")
+mf_credits(get_credit("OpenStreetMap"), bg = "#ffffff80")
+dev.off()
+```
+
+
+
+![](img/maptiles.png)
+
+:::
+::::
+
+## maptiles {.smaller}
+
+```{r}
+#| echo: true
+#| fig-width: 8.41
+#| fig-height: 3.16
+library(sf)
+library(maptiles)
+# import North Carolina counties
+nc_raw <- st_read(system.file("shape/nc.shp", package="sf"), quiet = TRUE)
+# Project to EPSG:3857
+nc <- st_transform(nc_raw, "EPSG:3857")
+# dowload tiles and compose raster (SpatRaster)
+nc_osm <- get_tiles(nc, crop = TRUE)
+# display map
+mf_theme(mar = c(0,0,0,0))
+mf_raster(nc_osm)
+mf_map(nc, col = NA, add = TRUE)
+# add credit
+mf_credits(txt = get_credit("OpenStreetMap"))
+```
+
+
+## maptiles
+
+![Mini maps of most of the tiles providers](img/maptilesex.png)
+
+
+## cartogram
+
+:::: {.columns}
+::: {.column width="50%"}
+![](img/map1.png)    
+
+![](img/map4.png)  
+:::
+::: {.column width="50%"}
+![](img/map3.png)
+
+![](img/map5.png)
+:::
+::::
+
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=cartogram)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/sjewo/cartogram)
+
+
+## cartogram
+
+
+::: {.r-stack}
+
+![](img/circ1.png)
+
+![](img/circ2.png){.fragment  .fade-in-then-out}
+
+:::
+
+
+## fisheye {.smaller}
+
+:::: {.columns}
+::: {.column width="60%"}
+
+Transform base maps using log-azimuthal projection
+
+
+<img src="img/logos/fisheye.png" width=100px />
+[<img src="img/logos/cran.jpeg" width=100px alt="GitHub repo"/>](https://CRAN.R-project.org/package=fisheye)
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/riatelab/fisheye)
+
+
+:::
+::: {.column width="40%"}
+::: {.r-stack}
+
+![](img/img000001.png)
+
+![](img/img000100.png){.fragment  .fade-in-then-out}
+
+![](img/mob.gif){.fragment  .fade-in-then-out}
+:::
+
+:::
+::::
+
+
+
+## fisheye {.smaller}
+```{r fisheye}
+#| fig-width: 7
+#| fig-height: 3
+#| echo: true
+#| layout-ncol: 2
+library(fisheye)
+library(mapsf)
+# Import dataset
+ncraw <- st_read(system.file("shape/nc.shp", package="sf"), quiet = TRUE)
+nc <- st_transform(ncraw, 3857)
+mf_map(nc, col ="grey90")
+mf_map(nc[51, ], add = TRUE, col = "grey40")
+mf_title("Original Map")
+# transform the basemap
+nc_fe  <- fisheye(nc, centre = nc[51, ])
+mf_map(nc_fe, col ="grey90")
+mf_map(nc_fe[51, ], add = TRUE, col = "grey40")
+mf_title("Log-Azimuthal Projection")
+```
+
+
+
+
+## fisheye
+
+![](img/concent.png)
+
+
+
+## popcircle {.smaller}
+:::: {.columns}
+::: {.column width="40%"}
+This one-function package computes circles with areas scaled to a variable and displays them using a compact layout. Original polygons are (roughly) scaled to fit inside these circles.
+
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/rCarto/popcircle)
+
+<small>`remotes::install_github("rCarto/popcircle")`</small>
+
+:::
+::: {.column width="60%"}
+![](img/pop.png)
+:::
+::::
+
+## popcircle {.smaller}
+
+```r 
+library(rnaturalearth)
+library(sf)
+library(wbstats)
+library(popcircle)
+library(mapsf)
+
+# Get countries
+ctry <- ne_countries(scale = 50, returnclass = "sf")
+ctry <- st_transform(ctry, "ESRI:54030")
+
+# Only keep the largest polygons of multipart polygons for a few countries
+# (e.g. display only continental US)
+frag_ctry <- c("US", "RU", "FR", "IN", "ES", "NL", "CL", "NZ", "ZA")
+largest_ring = function(x) {
+  x$ids <- 1:nrow(x)
+  pols = st_cast(x, "POLYGON", warn = FALSE)
+  spl = split(x = pols, f = pols$ids)
+  do.call(rbind, (lapply(spl, function(y)
+    y[which.max(st_area(y)), ])))
+}
+st_geometry(ctry[ctry$iso_a2 %in% frag_ctry, ]) <-
+  st_geometry(largest_ring(ctry[ctry$iso_a2 %in% frag_ctry, ]))
+
+
+# Get and merge data
+data_pop <-
+  wb_data(indicator = "SP.POP.TOTL",
+          start_date = 2021,
+          end_date = 2021)
+ctry_pop <-
+  merge(ctry[, "iso_a2"], data_pop, by.x = "iso_a2", by.y = "iso2c")
+
+# Computes circles and polygons
+res_pop <- popcircle(x = ctry_pop, var = "SP.POP.TOTL")
+circles_pop <- res_pop$circles
+shapes_pop <- res_pop$shapes
+
+
+# Create the figure
+mf_theme(mar = c(0, 0, 0, 0),
+         bg = "#e6ebe0",
+         fg = "grey50")
+mf_export(
+  x = circles_pop,
+  filename = "pop.png",
+  width = 800,
+  res = 100
+)
+
+# display circles and polygons
+mf_map(
+  circles_pop,
+  col = "#9bc1bc",
+  border = "white",
+  add = T
+)
+mf_map(
+  shapes_pop,
+  col = "#ed6a5a95",
+  border = "#ed6a5a",
+  add = TRUE,
+  lwd = .3
+)
+# labels
+circles_pop$lab <- paste0(circles_pop$country,
+                          '\n',
+                          round(circles_pop$SP.POP.TOTL / 1000000))
+mf_label(
+  x = circles_pop[1:36, ],
+  var = "lab",
+  halo = TRUE,
+  overlap = T,
+  pos = 3,
+  cex = seq(1, 0.4, length.out = 36),
+  r = .15
+)
+# title
+mtext(
+  "Population",
+  side = 3,
+  adj = 0.01,
+  padj = -1.5,
+  col = "grey50",
+  cex = 2
+)
+mtext(
+  "Millions of inhabitants\nin 2021",
+  side = 3,
+  adj = 0.01,
+  padj = 0.4,
+  col = "grey50",
+  cex = 1.2
+)
+# cerdits
+mf_credits(txt = "T. Giraud, 2023 - World Development Indicators, 2023",
+           pos = "bottomright")
+dev.off()
+```
+
+
+## spikemap {.smaller}
+
+![Lazaro Gamio, Karen Yourish and Bill Marsh, 2020-04-08](img/nyt.jpeg)
+
+## spikemap {.smaller}
+
+:::: {.columns}
+::: {.column width="40%"}
+It is possible to map quantities with circles, squares or other simple geometric symbols, spikemap uses spikes.
+
+
+[<img src="img/logos/ghlogo.png" width=100px alt="GitHub repo"/>](https://github.com/rCarto/spikemap)
+
+<small>`remotes::install_github("rCarto/spikemap")`</small>
+
+:::
+::: {.column width="60%"}
+![](img/spiky.png)
+:::
+::::
+
+## spikemap {.smaller}
+
+```r 
+library(sf)
+library(spikemap)
+library(mapsf)
+# import the dataset from the package
+com <- st_read(system.file("gpkg/com.gpkg", package="spikemap"))
+# theme 
+mf_theme(mar = c(0,0,0,0), bg = "#e1e5eb", fg =  "grey30")
+# save figure as spiky.png in img folder
+mf_export(x = com, filename = "img/spiky.png", width = 1000, res = 100)
+# plot the base map
+mf_map(com, col="#99aed1", border = "#e1e5eb", lwd = 0.2, add = T)
+# display spikes for municipalities under 1000 inhabitants.
+# use fixmax arg to allow multiple spike plots with the same scale.
+spikemap(x = com[com$pop<=1000, ], var = "pop",
+         inches = 2.3, fixmax = 500000,
+         col = "#ffffff90", border = "#94000090",  lwd = .5,
+         legend.pos = "x")
+# display spikes for other municipalities
+# use locator() to pick a place for the legend or use "bottomleft".
+spikemap(x = com[com$pop>1000, ], var = "pop",
+         inches = 2.3, fixmax = 500000,
+         col = "#ffffff", border = "#940000", lwd = 1.1,
+         legend.pos = c(799307.2, 6128000),
+         legend.title.txt = "Population",
+         legend.values.rnd = -3)
+
+# get the tips of the spikes
+lbl <- spikelabel(x = com, var = "pop",
+                  inches = 2.3, fixmax = 500000)
+lbl <- lbl[order(lbl$pop, decreasing = T),]
+# display only the 12 first, use various cex and halo
+mf_label(lbl[1:12,], var = "name",
+           pos = 3, offset = .5,
+           halo = T, bg = "#99aed150",
+           cex = c(1.3, 1.1, 1, rep(.8,12)),
+           col = "grey30")
+
+# add scale bar, north arrow, title, sources...
+mf_scale(size = 20, pos= c(629638.7 ,6136862.3 ), lwd = 1)
+mf_arrow(pos = "topright", col = "grey60")
+mf_credits(paste0("ADMIN EXPRESS COG édition 2019, IGN\n",
+                  "T. Giraud, 2020 | spikemap 0.1.0"))
+mf_title(txt = "Population \nin Occitanie", 
+         inner = T, line = 8,  
+         cex = 2.5, font = 3, fg = "grey30", bg = NA)
+dev.off()
+```
+
+
+## spikemap {.smaller}
+![](img/spikywrld.png)
+
+## spikemap {.smaller}
+![](img/fire.png)
+
+
+## more...
+
+```{r, echo = FALSE, out.width="2000px", fig.cap="@lambert21"}
+knitr::include_graphics("img/iron.png")
+```
+## more...
+
+```{r, echo = FALSE, out.width="1210px", fig.cap="@Giraud_2019"}
+knitr::include_graphics("img/all.png")
+```
+
+## more...
+
+```{r, echo = FALSE, out.width="1248px", fig.cap="@Le_Goix_2021"}
+knitr::include_graphics("img/legoix.jpg")
+```
+
+
+# Resources
+
+## [Geocomputation with R](https://r.geocompx.org/)
+
+![@lovelace2019geocomputation](img/GeocomputationwithR.png)
+
+## [Spatial Data Science with applications in R](https://r-spatial.org/book/)
+
+![@pebesma2023spatial](img/sdsr.jpg)
+
+
+## [Spatial Data Science with R and “terra”](https://rspatial.org/)
+
+![Robert J. Hijmans](img/sds.png)
+
+
+## [Progress in the R ecosystem for representing and handling spatial data](https://link.springer.com/article/10.1007/s10109-020-00336-0)
+
+![@bivand2021progress](img/bivand.png)
+
+
+
+## [Cartographie avec R](https://rcarto.github.io/cartographie_avec_r/)(fr)
+
+![@Giraud_Cartographie_avec_R_2023](img/c_ind.png)
+
+## [Géomatique avec R](https://rcarto.github.io/geomatique_avec_r/)(fr) 
+
+![@Giraud_Geomatique_avec_R_2023](img/geom.png)
+
+## Misc
+
+- [CRAN Task View: Analysis of Spatial Data](https://cran.r-project.org/web/views/Spatial.html)
+- [R Special Interest Group on using Geographical data and Mapping](https://stat.ethz.ch/mailman/listinfo/r-sig-geo) (mailing list)
+- [r-spatial blog](https://www.r-spatial.org/)
+
+
+# Thank you {.smaller}
+
+
+
+{{< fa display >}} [rcarto.github.io/RUG_HDSI](https://rcarto.github.io/RUG_HDSI)
+
+
+
+
+
+
+
+{{< fa brands mastodon >}} [\@rcarto\@fosstodon.org](https://fosstodon.org/\@rcarto)  
+
+
+{{< fa blog >}} [rcarto.github.io](https://rcarto.github.io/)  
+
+
+{{< fa brands github >}} [\@rcarto](https://github.com/rcarto)  
+
+
+
+::: small
+![](img/logos/logo_by-sa.svg)
+
+:::
+
+## References {.smaller}
+
+
+
+

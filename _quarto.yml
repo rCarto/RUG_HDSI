@@ -1,0 +1,7 @@
+project:
+  title: "Thematic Maps with R"
+  output-dir: "docs"
+  
+execute:
+  cache: true
+
